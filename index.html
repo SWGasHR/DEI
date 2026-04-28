@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>DE&I</title>
+  <link rel="icon" type="image/png" href="department.png">
   <style>
     body, html {
       margin: 0;
@@ -333,7 +334,7 @@
       display: block;
     }
 
-    /* --- LOADING MESSAGE --- */
+    /* --- SMARTER LOADING MESSAGE --- */
     .loading-message {
       position: absolute;
       inset: 0;
@@ -343,27 +344,36 @@
       justify-content: center;
       z-index: 8;
       color: #252763;
+      opacity: 1;
+      transition: opacity 0.25s ease;
     }
 
     .loading-message.hidden {
       display: none;
     }
 
+    .loading-message.fading {
+      opacity: 0;
+      pointer-events: none;
+    }
+
     .loading-content {
       display: flex;
       align-items: center;
-      gap: 12px;
+      justify-content: center;
+      gap: 14px;
       background: white;
-      border-radius: 12px;
-      padding: 14px 20px;
+      border-radius: 14px;
+      padding: 18px 28px;
       box-shadow: 0 10px 28px rgba(0,0,0,0.15);
-      font-size: 16px;
+      font-size: 21px;
       font-weight: 700;
+      letter-spacing: 0.1px;
     }
 
     .loading-icon {
-      width: 28px;
-      height: 28px;
+      width: 36px;
+      height: 36px;
       animation: spin 1s linear infinite;
       flex-shrink: 0;
     }
@@ -782,6 +792,14 @@
     let currentViewKey = null;
     let lastFocusedElementBeforeModal = null;
 
+    let loadingShowTimer = null;
+    let loadingHideTimer = null;
+    let loadingFadeTimer = null;
+
+    const LOADER_SHOW_DELAY_MS = 450;
+    const LOADER_HIDE_AFTER_IFRAME_LOAD_MS = 900;
+    const LOADER_FADE_MS = 250;
+
     function isPlaceholderLink(link) {
       if (!link) {
         return true;
@@ -806,12 +824,43 @@
     }
 
     function showLoadingMessage() {
+      clearTimeout(loadingShowTimer);
+      clearTimeout(loadingHideTimer);
+      clearTimeout(loadingFadeTimer);
+
       placeholderMessage.classList.add("hidden");
-      loadingMessage.classList.remove("hidden");
+      loadingMessage.classList.add("hidden");
+      loadingMessage.classList.remove("fading");
+
+      loadingShowTimer = setTimeout(function() {
+        loadingMessage.classList.remove("hidden");
+        loadingMessage.classList.remove("fading");
+      }, LOADER_SHOW_DELAY_MS);
     }
 
     function hideLoadingMessage() {
-      loadingMessage.classList.add("hidden");
+      clearTimeout(loadingShowTimer);
+      clearTimeout(loadingHideTimer);
+      clearTimeout(loadingFadeTimer);
+
+      if (loadingMessage.classList.contains("hidden")) {
+        return;
+      }
+
+      loadingMessage.classList.add("fading");
+
+      loadingFadeTimer = setTimeout(function() {
+        loadingMessage.classList.add("hidden");
+        loadingMessage.classList.remove("fading");
+      }, LOADER_FADE_MS);
+    }
+
+    function scheduleLoadingMessageHide() {
+      clearTimeout(loadingHideTimer);
+
+      loadingHideTimer = setTimeout(function() {
+        hideLoadingMessage();
+      }, LOADER_HIDE_AFTER_IFRAME_LOAD_MS);
     }
 
     function showPlaceholderMessage() {
@@ -1085,7 +1134,7 @@
     }
 
     contentFrame.addEventListener("load", function() {
-      hideLoadingMessage();
+      scheduleLoadingMessageHide();
     });
 
     saveNoButton.addEventListener("click", function() {
