@@ -792,7 +792,7 @@
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=ab57594639f5477b8cf810217530e5e9"
         },
         {
-          id: "main hr initiative",
+          id: "main-hr-initiative",
           label: "Main HR Initiative #1 (Placeholder)",
           embedSrc: "INSERT_DEPARTMENT_INITIATIVE_LINK_HERE"
         }
@@ -1016,6 +1016,12 @@
     function hidePlaceholderMessage() {
       placeholderMessage.classList.add("hidden");
     }
+
+    placeholderMessage.addEventListener("click", function(event) {
+      if (event.target === placeholderMessage) {
+        hidePlaceholderMessage();
+      }
+    });
 
     function setViewOnlyNote(shouldShow) {
       if (shouldShow) {
