@@ -365,6 +365,12 @@
       pointer-events: none;
     }
 
+    .loading-message.fading {
+      opacity: 0;
+      visibility: visible;
+      pointer-events: none;
+    }
+
     .loading-content {
       display: flex;
       align-items: center;
@@ -767,7 +773,7 @@
 
       projects: [
         {
-          id: "project1",
+          id: "bau",
           label: "BAU",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=ab57594639f5477b8cf810217530e5e9"
         }
@@ -802,9 +808,14 @@
 
     let loadingShowTimer = null;
     let loadingHideTimer = null;
+    let loadingFadeTimer = null;
+    let loadingVisibleAt = 0;
+    let loadingCycleId = 0;
 
-    const LOADER_SHOW_DELAY_MS = 350;
-    const LOADER_HIDE_AFTER_IFRAME_LOAD_MS = 650;
+    const LOADER_SHOW_DELAY_MS = 325;
+    const LOADER_HIDE_AFTER_IFRAME_LOAD_MS = 700;
+    const LOADER_FADE_MS = 350;
+    const LOADER_MIN_VISIBLE_MS = 950;
 
     function isPlaceholderLink(link) {
       if (!link) {
@@ -830,26 +841,72 @@
     }
 
     function showLoadingMessage() {
+      loadingCycleId += 1;
+      const thisCycle = loadingCycleId;
+
       clearTimeout(loadingShowTimer);
       clearTimeout(loadingHideTimer);
+      clearTimeout(loadingFadeTimer);
 
       placeholderMessage.classList.add("hidden");
 
       loadingMessage.classList.remove("visible");
+      loadingMessage.classList.remove("fading");
       loadingMessage.classList.add("hidden");
+      loadingVisibleAt = 0;
 
       loadingShowTimer = setTimeout(function() {
+        if (thisCycle !== loadingCycleId) {
+          return;
+        }
+
         loadingMessage.classList.remove("hidden");
-        loadingMessage.classList.add("visible");
+
+        requestAnimationFrame(function() {
+          if (thisCycle !== loadingCycleId) {
+            return;
+          }
+
+          loadingVisibleAt = Date.now();
+          loadingMessage.classList.add("visible");
+          loadingMessage.classList.remove("fading");
+        });
       }, LOADER_SHOW_DELAY_MS);
     }
 
     function hideLoadingMessage() {
+      loadingCycleId += 1;
+      const thisCycle = loadingCycleId;
+
       clearTimeout(loadingShowTimer);
       clearTimeout(loadingHideTimer);
+      clearTimeout(loadingFadeTimer);
 
-      loadingMessage.classList.remove("visible");
-      loadingMessage.classList.add("hidden");
+      if (loadingMessage.classList.contains("hidden") && !loadingMessage.classList.contains("visible")) {
+        return;
+      }
+
+      const visibleFor = loadingVisibleAt ? Date.now() - loadingVisibleAt : 0;
+      const remainingVisibleTime = Math.max(LOADER_MIN_VISIBLE_MS - visibleFor, 0);
+
+      loadingFadeTimer = setTimeout(function() {
+        if (thisCycle !== loadingCycleId) {
+          return;
+        }
+
+        loadingMessage.classList.remove("visible");
+        loadingMessage.classList.add("fading");
+
+        loadingFadeTimer = setTimeout(function() {
+          if (thisCycle !== loadingCycleId) {
+            return;
+          }
+
+          loadingMessage.classList.add("hidden");
+          loadingMessage.classList.remove("fading");
+          loadingVisibleAt = 0;
+        }, LOADER_FADE_MS);
+      }, remainingVisibleTime);
     }
 
     function scheduleLoadingMessageHide() {
