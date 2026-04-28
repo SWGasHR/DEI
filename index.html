@@ -338,34 +338,28 @@
     .loading-message {
       position: absolute;
       inset: 0;
-      background: rgba(255,255,255,0.78);
+      background: #2849c8;
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 8;
       color: #252763;
       opacity: 0;
-      visibility: hidden;
       pointer-events: none;
-      transition: opacity 0.35s ease, visibility 0s linear 0.35s;
+      transition: opacity 0.32s ease;
+    }
+
+    .loading-message.hidden {
+      display: none;
     }
 
     .loading-message.visible {
       opacity: 1;
-      visibility: visible;
       pointer-events: auto;
-      transition: opacity 0.35s ease, visibility 0s linear 0s;
-    }
-
-    .loading-message.hidden {
-      opacity: 0;
-      visibility: hidden;
-      pointer-events: none;
     }
 
     .loading-message.fading {
       opacity: 0;
-      visibility: visible;
       pointer-events: none;
     }
 
@@ -373,20 +367,20 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 15px;
+      gap: 14px;
       background: white;
-      border-radius: 16px;
-      padding: 20px 32px;
-      box-shadow: 0 14px 34px rgba(0,0,0,0.18);
-      font-size: 23px;
+      border-radius: 14px;
+      padding: 18px 28px;
+      box-shadow: 0 10px 28px rgba(0,0,0,0.15);
+      font-size: 21px;
       font-weight: 700;
       letter-spacing: 0.1px;
     }
 
     .loading-icon {
-      width: 38px;
-      height: 38px;
-      animation: spin 0.9s linear infinite;
+      width: 36px;
+      height: 36px;
+      animation: spin 1s linear infinite;
       flex-shrink: 0;
     }
 
@@ -439,6 +433,16 @@
       color: #444;
       font-size: 15px;
       line-height: 1.45;
+    }
+
+    .placeholder-box a {
+      color: #252763;
+      font-weight: 700;
+      text-decoration: underline;
+    }
+
+    .placeholder-box a:hover {
+      color: #1d1f50;
     }
 
     /* --- CUSTOM SAVE MODAL --- */
@@ -534,7 +538,7 @@
   <div class="top-nav">
 
     <a class="nav-home portal-view-link active"
-       href="#"
+       href="#home"
        data-view-id="home"
        title="Home">
       <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -543,19 +547,19 @@
     </a>
 
     <a class="nav-item portal-view-link"
-       href="#"
+       href="#mainInitiatives"
        data-view-id="mainInitiatives">
       Main Initiatives
     </a>
 
     <a class="nav-item portal-view-link"
-       href="#"
+       href="#allDepartmentProjects"
        data-view-id="allDepartmentProjects">
       All Projects View Only
     </a>
 
     <a class="nav-item portal-view-link"
-       href="#"
+       href="#allHrPersonalTasks"
        data-view-id="allHrPersonalTasks">
       All HR Personal Tasks
     </a>
@@ -694,7 +698,19 @@
       <div class="placeholder-box">
         <h2>Link not added yet</h2>
         <p>
-          This button is connected to a placeholder link. Add the correct Smartsheet published/embed link in the code and try again.
+          Please reach out to
+          <a class="placeholder-action-link"
+             href="mailto:Benjamin.Bell@swgas.com?subject=Smartsheet%20Portal%20Link%20Issue">
+            Benjamin.Bell@swgas.com
+          </a>
+          to fix this link, or use the
+          <a class="placeholder-action-link"
+             href="https://app.smartsheet.com/b/form/019a16dd2b3d7e2d96db9a9e8c1aedc7"
+             target="_blank"
+             rel="noopener noreferrer">
+            Project Creation Request Form
+          </a>
+          to create a new project.
         </p>
       </div>
     </div>
@@ -751,13 +767,13 @@
         },
 
         mainInitiatives: {
-          label: "(Department Name) Main Initiatives",
+          label: "DE&I Main Initiatives",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=3afa72eb25444f0097fe00081a918a3e",
           viewOnlyNote: false
         },
 
         allDepartmentProjects: {
-          label: "All (Department Name) Projects (View Only)",
+          label: "All DE&I Projects (View Only)",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=bbebdce23f244f19b0651962b37bfba4",
           viewOnlyNote: true
         },
@@ -802,18 +818,19 @@
     let pendingNavigationAction = null;
     let projectWarningCollapsedByUser = false;
     let currentViewKey = null;
+    let currentRouteHash = "";
+    let suppressHashChange = false;
     let lastFocusedElementBeforeModal = null;
 
     let loadingShowTimer = null;
     let loadingHideTimer = null;
     let loadingFadeTimer = null;
     let loadingVisibleAt = 0;
-    let loadingCycleId = 0;
 
-    const LOADER_SHOW_DELAY_MS = 325;
-    const LOADER_HIDE_AFTER_IFRAME_LOAD_MS = 700;
-    const LOADER_FADE_MS = 350;
-    const LOADER_MIN_VISIBLE_MS = 950;
+    const LOADER_SHOW_DELAY_MS = 350;
+    const LOADER_HIDE_AFTER_IFRAME_LOAD_MS = 650;
+    const LOADER_FADE_MS = 320;
+    const LOADER_MIN_VISIBLE_MS = 900;
 
     function isPlaceholderLink(link) {
       if (!link) {
@@ -838,33 +855,115 @@
       return text.split("(Department Name)").join(PORTAL_CONFIG.departmentName);
     }
 
-    function showLoadingMessage() {
-      loadingCycleId += 1;
-      const thisCycle = loadingCycleId;
+    function routeKey(route) {
+      if (!route) {
+        return "";
+      }
 
+      return route.type + ":" + route.id;
+    }
+
+    function routeHash(route) {
+      if (!route) {
+        return "#home";
+      }
+
+      if (route.type === "project") {
+        return "#project-" + encodeURIComponent(route.id);
+      }
+
+      return "#" + encodeURIComponent(route.id);
+    }
+
+    function defaultRoute() {
+      return {
+        type: "view",
+        id: PORTAL_CONFIG.defaultViewId || "home"
+      };
+    }
+
+    function parseHashRoute() {
+      let hashValue = window.location.hash || "";
+
+      if (!hashValue) {
+        return defaultRoute();
+      }
+
+      hashValue = decodeURIComponent(hashValue.replace(/^#/, ""));
+
+      if (!hashValue) {
+        return defaultRoute();
+      }
+
+      if (PORTAL_CONFIG.views[hashValue]) {
+        return {
+          type: "view",
+          id: hashValue
+        };
+      }
+
+      if (hashValue.startsWith("view-")) {
+        const viewId = hashValue.replace(/^view-/, "");
+
+        if (PORTAL_CONFIG.views[viewId]) {
+          return {
+            type: "view",
+            id: viewId
+          };
+        }
+      }
+
+      if (hashValue.startsWith("project-")) {
+        const projectId = hashValue.replace(/^project-/, "");
+
+        if (getProjectById(projectId)) {
+          return {
+            type: "project",
+            id: projectId
+          };
+        }
+      }
+
+      if (getProjectById(hashValue)) {
+        return {
+          type: "project",
+          id: hashValue
+        };
+      }
+
+      return null;
+    }
+
+    function updateRouteHash(route) {
+      const newHash = routeHash(route);
+      currentRouteHash = newHash;
+
+      if (window.location.hash !== newHash) {
+        suppressHashChange = true;
+        window.location.hash = newHash;
+
+        setTimeout(function() {
+          suppressHashChange = false;
+        }, 100);
+      }
+    }
+
+    function showLoadingMessage() {
       clearTimeout(loadingShowTimer);
       clearTimeout(loadingHideTimer);
       clearTimeout(loadingFadeTimer);
 
       placeholderMessage.classList.add("hidden");
 
+      loadingMessage.classList.add("hidden");
       loadingMessage.classList.remove("visible");
       loadingMessage.classList.remove("fading");
-      loadingMessage.classList.add("hidden");
       loadingVisibleAt = 0;
 
       loadingShowTimer = setTimeout(function() {
-        if (thisCycle !== loadingCycleId) {
-          return;
-        }
-
         loadingMessage.classList.remove("hidden");
 
         requestAnimationFrame(function() {
-          if (thisCycle !== loadingCycleId) {
-            return;
-          }
-
           loadingVisibleAt = Date.now();
           loadingMessage.classList.add("visible");
           loadingMessage.classList.remove("fading");
@@ -873,14 +972,11 @@
     }
 
     function hideLoadingMessage() {
-      loadingCycleId += 1;
-      const thisCycle = loadingCycleId;
-
       clearTimeout(loadingShowTimer);
       clearTimeout(loadingHideTimer);
       clearTimeout(loadingFadeTimer);
 
-      if (loadingMessage.classList.contains("hidden") && !loadingMessage.classList.contains("visible")) {
+      if (loadingMessage.classList.contains("hidden")) {
         return;
       }
 
@@ -888,18 +984,10 @@
       const remainingVisibleTime = Math.max(LOADER_MIN_VISIBLE_MS - visibleFor, 0);
 
       loadingFadeTimer = setTimeout(function() {
-        if (thisCycle !== loadingCycleId) {
-          return;
-        }
-
         loadingMessage.classList.remove("visible");
         loadingMessage.classList.add("fading");
 
         loadingFadeTimer = setTimeout(function() {
-          if (thisCycle !== loadingCycleId) {
-            return;
-          }
-
           loadingMessage.classList.add("hidden");
           loadingMessage.classList.remove("fading");
           loadingVisibleAt = 0;
@@ -995,7 +1083,7 @@
 
       if (isPlaceholderLink(newEmbedLink)) {
         showPlaceholderMessage();
-        return;
+        return false;
       }
 
       hidePlaceholderMessage();
@@ -1013,6 +1101,7 @@
       }
 
       setActiveLink(clickedLink, shouldShowProjectWarning);
+      return true;
     }
 
     function getFocusableModalElements() {
@@ -1058,53 +1147,112 @@
       });
     }
 
+    function getLinkForRoute(route) {
+      if (!route) {
+        return null;
+      }
+
+      if (route.type === "project") {
+        return document.querySelector('.project-view-link[data-project-id="' + route.id + '"]');
+      }
+
+      return document.querySelector('.portal-view-link[data-view-id="' + route.id + '"]');
+    }
+
+    function loadRoute(route, shouldUpdateHash) {
+      if (!route) {
+        showPlaceholderMessage();
+        return false;
+      }
+
+      let success = false;
+
+      if (route.type === "project") {
+        const project = getProjectById(route.id);
+        const clickedLink = getLinkForRoute(route);
+
+        if (!project) {
+          showPlaceholderMessage();
+          return false;
+        }
+
+        success = loadEmbeddedLink({
+          embedSrc: project.embedSrc,
+          isProject: true,
+          clickedLink: clickedLink,
+          viewKey: routeKey(route),
+          viewOnlyNote: false
+        });
+      } else {
+        const view = PORTAL_CONFIG.views[route.id];
+        const clickedLink = getLinkForRoute(route);
+
+        if (!view) {
+          showPlaceholderMessage();
+          return false;
+        }
+
+        success = loadEmbeddedLink({
+          embedSrc: view.embedSrc,
+          isProject: false,
+          clickedLink: clickedLink,
+          viewKey: routeKey(route),
+          viewOnlyNote: view.viewOnlyNote
+        });
+      }
+
+      if (success && shouldUpdateHash) {
+        updateRouteHash(route);
+      }
+
+      if (success && !shouldUpdateHash) {
+        currentRouteHash = window.location.hash || routeHash(route);
+      }
+
+      return success;
+    }
+
     function handlePortalViewClick(clickedLink) {
       const viewId = clickedLink.getAttribute("data-view-id");
-      const view = PORTAL_CONFIG.views[viewId];
-      const viewKey = "view:" + viewId;
+      const route = {
+        type: "view",
+        id: viewId
+      };
 
-      if (!view) {
+      if (!PORTAL_CONFIG.views[viewId]) {
         showPlaceholderMessage();
         return;
       }
 
-      if (currentViewKey === viewKey) {
+      if (currentViewKey === routeKey(route)) {
+        updateRouteHash(route);
         return;
       }
 
       runWithSaveCheck(function() {
-        loadEmbeddedLink({
-          embedSrc: view.embedSrc,
-          isProject: false,
-          clickedLink: clickedLink,
-          viewKey: viewKey,
-          viewOnlyNote: view.viewOnlyNote
-        });
+        loadRoute(route, true);
       });
     }
 
     function handleProjectViewClick(clickedLink) {
       const projectId = clickedLink.getAttribute("data-project-id");
-      const project = getProjectById(projectId);
-      const viewKey = "project:" + projectId;
+      const route = {
+        type: "project",
+        id: projectId
+      };
 
-      if (!project) {
+      if (!getProjectById(projectId)) {
         showPlaceholderMessage();
         return;
       }
 
-      if (currentViewKey === viewKey) {
+      if (currentViewKey === routeKey(route)) {
+        updateRouteHash(route);
         return;
       }
 
       runWithSaveCheck(function() {
-        loadEmbeddedLink({
-          embedSrc: project.embedSrc,
-          isProject: true,
-          clickedLink: clickedLink,
-          viewKey: viewKey,
-          viewOnlyNote: false
-        });
+        loadRoute(route, true);
       });
     }
 
@@ -1115,7 +1263,10 @@
         const projectLink = document.createElement("a");
 
         projectLink.className = "project-view-link";
-        projectLink.href = "#";
+        projectLink.href = routeHash({
+          type: "project",
+          id: project.id
+        });
         projectLink.setAttribute("data-project-id", project.id);
         projectLink.textContent = project.label;
 
@@ -1163,26 +1314,64 @@
         }
 
         link.setAttribute("aria-label", replaceDepartmentName(view.label));
+        link.href = routeHash({
+          type: "view",
+          id: viewId
+        });
       });
     }
 
-    function loadDefaultView() {
-      const defaultViewId = PORTAL_CONFIG.defaultViewId || "home";
-      const defaultView = PORTAL_CONFIG.views[defaultViewId];
-      const defaultLink = document.querySelector('.portal-view-link[data-view-id="' + defaultViewId + '"]');
+    function loadInitialRoute() {
+      const route = parseHashRoute();
 
-      if (!defaultView) {
+      if (!route) {
         showPlaceholderMessage();
         return;
       }
 
-      loadEmbeddedLink({
-        embedSrc: defaultView.embedSrc,
-        isProject: false,
-        clickedLink: defaultLink,
-        viewKey: "view:" + defaultViewId,
-        viewOnlyNote: defaultView.viewOnlyNote
-      });
+      loadRoute(route, false);
+      currentRouteHash = window.location.hash || routeHash(route);
+    }
+
+    function handleHashChange() {
+      if (suppressHashChange) {
+        currentRouteHash = window.location.hash || currentRouteHash;
+        return;
+      }
+
+      const route = parseHashRoute();
+
+      if (!route) {
+        showPlaceholderMessage();
+        return;
+      }
+
+      const requestedHash = routeHash(route);
+
+      if (currentViewKey === routeKey(route)) {
+        currentRouteHash = requestedHash;
+        return;
+      }
+
+      if (projectModeActive) {
+        const hashToRestore = currentRouteHash || routeHash(defaultRoute());
+
+        suppressHashChange = true;
+        window.location.hash = hashToRestore;
+
+        setTimeout(function() {
+          suppressHashChange = false;
+        }, 100);
+
+        showSaveModal(function() {
+          loadRoute(route, true);
+        });
+
+        return;
+      }
+
+      loadRoute(route, false);
+      currentRouteHash = requestedHash;
     }
 
     contentFrame.addEventListener("load", function() {
@@ -1243,6 +1432,7 @@
     });
 
     projectSearch.addEventListener("input", filterProjectLinks);
+    window.addEventListener("hashchange", handleHashChange);
 
     document.addEventListener("click", function(event) {
       const clickedLink = event.target.closest("a");
@@ -1253,7 +1443,12 @@
 
       const isPortalViewLink = clickedLink.classList.contains("portal-view-link");
       const isProjectViewLink = clickedLink.classList.contains("project-view-link");
+      const isPlaceholderActionLink = clickedLink.classList.contains("placeholder-action-link");
       const href = clickedLink.getAttribute("href");
+
+      if (isPlaceholderActionLink) {
+        return;
+      }
 
       if (isPortalViewLink) {
         event.preventDefault();
@@ -1305,7 +1500,7 @@
 
     applyConfigToNavigation();
     renderProjectLinks();
-    loadDefaultView();
+    loadInitialRoute();
   </script>
 
 </body>
