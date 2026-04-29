@@ -150,6 +150,76 @@
 
     .nav-spacer {
       flex: 1;
+      min-width: 230px;
+      padding: 0 14px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* --- NAV MESSAGE POP-UP --- */
+    .dashboard-refresh-popup {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: min(470px, 100%);
+      min-height: 34px;
+      box-sizing: border-box;
+      padding: 8px 34px 8px 18px;
+      background: linear-gradient(135deg, #f7f9ff 0%, #eef3ff 100%);
+      color: #252763;
+      border: 1px solid rgba(194, 205, 255, 0.95);
+      border-radius: 999px;
+      box-shadow: 0 5px 16px rgba(0,0,0,0.18);
+      text-align: center;
+      font-size: 12.5px;
+      font-weight: 700;
+      line-height: 1.25;
+      letter-spacing: 0.01em;
+    }
+
+    .dashboard-refresh-popup.hidden {
+      display: none;
+    }
+
+    .refresh-popup-text {
+      display: block;
+      width: 100%;
+      text-align: center;
+    }
+
+    .refresh-popup-close {
+      position: absolute;
+      top: -7px;
+      right: -7px;
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      border: 2px solid #252763;
+      background: #5b75d6;
+      color: white;
+      cursor: pointer;
+      font-size: 15px;
+      font-weight: 800;
+      line-height: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 0;
+      font-family: inherit;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.22);
+      transition: background-color 0.2s ease, transform 0.2s ease;
+    }
+
+    .refresh-popup-close:hover {
+      background: #7891ec;
+      transform: translateY(-1px);
+    }
+
+    .refresh-popup-close:focus-visible {
+      outline: 2px solid white;
+      outline-offset: 2px;
     }
 
     .swgas-logo-link {
@@ -531,6 +601,19 @@
     .save-modal-button.yes:hover {
       background: #1d1f50;
     }
+
+    @media (max-width: 980px) {
+      .dashboard-refresh-popup {
+        min-height: 30px;
+        padding: 7px 30px 7px 14px;
+        font-size: 11.5px;
+      }
+
+      .nav-spacer {
+        min-width: 190px;
+        padding: 0 8px;
+      }
+    }
   </style>
 </head>
 <body>
@@ -644,7 +727,12 @@
       </div>
     </div>
 
-    <div class="nav-spacer"></div>
+    <div class="nav-spacer">
+      <div class="dashboard-refresh-popup hidden" id="refreshPopup" role="status" aria-live="polite">
+        <span class="refresh-popup-text">This Dashboard updates every 24 hours.</span>
+        <button class="refresh-popup-close" id="refreshPopupClose" type="button" aria-label="Dismiss dashboard update reminder">×</button>
+      </div>
+    </div>
 
     <a class="swgas-logo-link"
        href="https://swgas.sharepoint.com/sites/HR"
@@ -763,25 +851,29 @@
         home: {
           label: "Home",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=c5391d7667514bd9a4b78a04e9ed637a",
-          viewOnlyNote: false
+          viewOnlyNote: false,
+          refreshReminder: true
         },
 
         mainInitiatives: {
           label: "DE&I Main Initiatives",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=3afa72eb25444f0097fe00081a918a3e",
-          viewOnlyNote: false
+          viewOnlyNote: false,
+          refreshReminder: true
         },
 
         allDepartmentProjects: {
           label: "All DE&I Projects (View Only)",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=bbebdce23f244f19b0651962b37bfba4",
-          viewOnlyNote: true
+          viewOnlyNote: true,
+          refreshReminder: false
         },
 
         allHrPersonalTasks: {
           label: "All HR Personal Tasks (View Only)",
           embedSrc: "https://app.smartsheet.com/b/publish?EQBCT=411b8b11b68440d29c2d27c40b0397ed",
-          viewOnlyNote: true
+          viewOnlyNote: true,
+          refreshReminder: false
         }
       },
 
@@ -813,6 +905,9 @@
     const loadingMessage = document.getElementById("loadingMessage");
     const placeholderMessage = document.getElementById("placeholderMessage");
     const viewOnlyNote = document.getElementById("viewOnlyNote");
+    const refreshPopup = document.getElementById("refreshPopup");
+    const refreshPopupText = refreshPopup ? refreshPopup.querySelector(".refresh-popup-text") : null;
+    const refreshPopupClose = document.getElementById("refreshPopupClose");
     const projectLinksContainer = document.getElementById("projectLinksContainer");
     const projectSearch = document.getElementById("projectSearch");
     const noProjectResults = document.getElementById("noProjectResults");
@@ -826,6 +921,7 @@
     let currentRouteHash = "";
     let suppressHashChange = false;
     let lastFocusedElementBeforeModal = null;
+    let navPopupDismissedRouteKey = null;
 
     let loadingShowTimer = null;
     let loadingHideTimer = null;
@@ -1024,11 +1120,31 @@
     });
 
     function setViewOnlyNote(shouldShow) {
-      if (shouldShow) {
-        viewOnlyNote.classList.remove("hidden");
-      } else {
-        viewOnlyNote.classList.add("hidden");
+      viewOnlyNote.classList.add("hidden");
+    }
+
+    function setNavPopup(shouldShow, message) {
+      if (!refreshPopup) {
+        return;
       }
+
+      if (message && refreshPopupText) {
+        refreshPopupText.textContent = message;
+      }
+
+      if (shouldShow && navPopupDismissedRouteKey !== currentViewKey) {
+        refreshPopup.classList.remove("hidden");
+      } else {
+        refreshPopup.classList.add("hidden");
+      }
+    }
+
+    function setRefreshReminder(shouldShow) {
+      setNavPopup(shouldShow, "This Dashboard updates every 24 hours.");
+    }
+
+    function setViewOnlyReminder(shouldShow) {
+      setNavPopup(shouldShow, "View-only: Open the project sheet from Projects to make updates.");
     }
 
     function setActiveLink(activeLink, isProject) {
@@ -1091,6 +1207,7 @@
       const clickedLink = options.clickedLink;
       const viewKey = options.viewKey;
       const shouldShowViewOnlyNote = options.viewOnlyNote;
+      const shouldShowRefreshReminder = options.refreshReminder;
 
       if (isPlaceholderLink(newEmbedLink)) {
         showPlaceholderMessage();
@@ -1106,9 +1223,16 @@
       if (shouldShowProjectWarning) {
         showWarningBar();
         setViewOnlyNote(false);
+        setNavPopup(false);
       } else {
         hideWarningBar();
-        setViewOnlyNote(shouldShowViewOnlyNote);
+        setViewOnlyNote(false);
+
+        if (shouldShowViewOnlyNote) {
+          setViewOnlyReminder(true);
+        } else {
+          setRefreshReminder(shouldShowRefreshReminder);
+        }
       }
 
       setActiveLink(clickedLink, shouldShowProjectWarning);
@@ -1192,7 +1316,8 @@
           isProject: true,
           clickedLink: clickedLink,
           viewKey: routeKey(route),
-          viewOnlyNote: false
+          viewOnlyNote: false,
+          refreshReminder: false
         });
       } else {
         const view = PORTAL_CONFIG.views[route.id];
@@ -1208,7 +1333,8 @@
           isProject: false,
           clickedLink: clickedLink,
           viewKey: routeKey(route),
-          viewOnlyNote: view.viewOnlyNote
+          viewOnlyNote: view.viewOnlyNote,
+          refreshReminder: view.refreshReminder
         });
       }
 
@@ -1407,6 +1533,15 @@
         event.preventDefault();
       }
     });
+
+    if (refreshPopupClose) {
+      refreshPopupClose.addEventListener("click", function(event) {
+        event.preventDefault();
+        event.stopPropagation();
+        navPopupDismissedRouteKey = currentViewKey;
+        setNavPopup(false);
+      });
+    }
 
     document.addEventListener("keydown", function(event) {
       const modalIsOpen = !saveModal.classList.contains("hidden");
