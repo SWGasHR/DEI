@@ -312,6 +312,9 @@
     }
 
     .dropdown-menu a.request-access-link {
+      display: flex;
+      align-items: center;
+      justify-content: center;
       margin: 8px 12px 2px 12px;
       padding: 11px 14px;
       border-radius: 10px;
@@ -332,6 +335,56 @@
       transform: translateY(-1px);
       box-shadow: 0 9px 20px rgba(37, 39, 99, 0.38);
       outline: none;
+    }
+
+    .request-access-content {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+    }
+
+    .request-access-icon {
+      width: 14px;
+      height: 14px;
+      flex: 0 0 14px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.2;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .request-access-arrow-wrap {
+      width: 21px;
+      height: 21px;
+      flex: 0 0 21px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-left: 2px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.16);
+      border: 1px solid rgba(255,255,255,0.22);
+      transition: transform 0.2s ease, background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .request-access-arrow {
+      width: 13px;
+      height: 13px;
+      fill: none;
+      stroke: currentColor;
+      stroke-width: 2.4;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+
+    .dropdown-menu a.request-access-link:hover .request-access-arrow-wrap,
+    .dropdown-menu a.request-access-link:focus .request-access-arrow-wrap {
+      transform: translateX(3px);
+      background: rgba(255,255,255,0.24);
+      border-color: rgba(255,255,255,0.34);
     }
 
     .dropdown-header {
@@ -1150,7 +1203,19 @@
                class="request-access-link"
                href="javascript:void(0)"
                onclick="openAccessRequestEmail(event)">
-              Request Access
+              <span class="request-access-content">
+                <svg class="request-access-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4 6h16c.6 0 1 .4 1 1v10c0 .6-.4 1-1 1H4c-.6 0-1-.4-1-1V7c0-.6.4-1 1-1z"></path>
+                  <path d="m4 8 8 5 8-5"></path>
+                </svg>
+                <span>Request Access</span>
+                <span class="request-access-arrow-wrap" aria-hidden="true">
+                  <svg class="request-access-arrow" viewBox="0 0 20 20" focusable="false">
+                    <path d="M4 10h10"></path>
+                    <path d="m10 6 4 4-4 4"></path>
+                  </svg>
+                </span>
+              </span>
             </a>
           </div>
         </div>
