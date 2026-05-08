@@ -311,50 +311,27 @@
       font-weight: 700;
     }
 
-    .support-request-access {
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
+    .dropdown-menu a.request-access-link {
       margin: 8px 12px 2px 12px;
-      padding: 12px 14px !important;
+      padding: 11px 14px;
       border-radius: 10px;
-      background: linear-gradient(135deg, #252763 0%, #3c42a3 100%);
-      color: #ffffff !important;
+      background: linear-gradient(135deg, #252763 0%, #3d4294 100%);
+      color: #ffffff;
       font-weight: 800;
-      letter-spacing: 0.1px;
       text-align: center;
-      box-shadow: 0 8px 18px rgba(37, 39, 99, 0.24);
-      border: 1px solid rgba(37, 39, 99, 0.20);
-      position: relative;
-      transition: transform 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease;
+      box-shadow: 0 6px 16px rgba(37, 39, 99, 0.30);
+      border: 1px solid rgba(37, 39, 99, 0.18);
+      letter-spacing: 0.1px;
+      transition: transform 0.2s ease, box-shadow 0.2s ease, background-color 0.2s ease;
     }
 
-    .support-request-access::before {
-      content: "✉";
-      font-size: 14px;
-      line-height: 1;
-    }
-
-    .support-request-access::after {
-      content: "→";
-      font-size: 14px;
-      line-height: 1;
-      opacity: 0.9;
-      transition: transform 0.18s ease;
-    }
-
-    .support-request-access:hover,
-    .support-request-access:focus {
-      background: linear-gradient(135deg, #1f2157 0%, #30378f 100%) !important;
-      box-shadow: 0 10px 22px rgba(37, 39, 99, 0.32);
+    .dropdown-menu a.request-access-link:hover,
+    .dropdown-menu a.request-access-link:focus {
+      background: linear-gradient(135deg, #1d1f50 0%, #30357e 100%);
+      color: #ffffff;
       transform: translateY(-1px);
+      box-shadow: 0 9px 20px rgba(37, 39, 99, 0.38);
       outline: none;
-    }
-
-    .support-request-access:hover::after,
-    .support-request-access:focus::after {
-      transform: translateX(2px);
     }
 
     .dropdown-header {
@@ -1169,9 +1146,9 @@
 
             <div class="dropdown-divider"></div>
 
-            <a id="requestAccessLink"
-               class="support-request-access"
-               href="#"
+            <a id="accessRequestLink"
+               class="request-access-link"
+               href="javascript:void(0)"
                onclick="openAccessRequestEmail(event)">
               Request Access
             </a>
@@ -1474,6 +1451,7 @@
     const smartsheetSupportLink = document.getElementById("smartsheetSupportLink");
     const jobAidMgrLink = document.getElementById("jobAidMgrLink");
     const jobAidDirLink = document.getElementById("jobAidDirLink");
+    const accessRequestLink = document.getElementById("accessRequestLink");
     const placeholderEmailLink = document.getElementById("placeholderEmailLink");
     const placeholderProjectCreationLink = document.getElementById("placeholderProjectCreationLink");
 
@@ -2412,56 +2390,37 @@
         event.stopPropagation();
       }
 
-      const contactEmail = (PORTAL_CONFIG.contactEmail || "").trim();
-
-      if (!contactEmail || isPlaceholderLink(contactEmail)) {
-        alert("The access request email address has not been configured yet.");
-        return;
-      }
-
       const route = parseHashRoute() || defaultRoute();
       const embedData = getEmbedDataForRoute(route);
       const portalTitle = replaceDepartmentName(PORTAL_CONFIG.portalTitle || document.title || "Smartsheet Project Portal");
-      const departmentName = replaceDepartmentName(PORTAL_CONFIG.departmentName || "Department");
+      const departmentName = replaceDepartmentName(PORTAL_CONFIG.departmentName || "Unknown Department");
       const currentPage = embedData && embedData.label
         ? replaceDepartmentName(embedData.label)
         : "Unknown Page/View";
       const currentUrl = window.location.href;
-      const requestedAt = new Date().toLocaleString();
+      const submittedAt = new Date().toLocaleString();
+      const contactEmail = (PORTAL_CONFIG.contactEmail || "").trim();
+
+      if (!contactEmail || isPlaceholderLink(contactEmail)) {
+        alert("The access request email has not been configured yet. Please contact the portal owner.");
+        return;
+      }
 
       const subject = encodeURIComponent("Access Request - " + portalTitle);
       const body = encodeURIComponent(
-        "Hello Ben,
-
-" +
-        "I am requesting access to the Smartsheet portal page listed below.
-
-" +
-        "Portal: " + portalTitle + "
-" +
-        "Department: " + departmentName + "
-" +
-        "Current Page/View: " + currentPage + "
-" +
-        "Page URL: " + currentUrl + "
-" +
-        "Request Date/Time: " + requestedAt + "
-
-" +
-        "Reason for access, optional:
-" +
-        "[Please type reason here]
-
-" +
+        "Hello Ben,\n\n" +
+        "I am requesting access to the Smartsheet portal page listed below.\n\n" +
+        "Portal: " + portalTitle + "\n" +
+        "Department: " + departmentName + "\n" +
+        "Current Page/View: " + currentPage + "\n" +
+        "Page URL: " + currentUrl + "\n" +
+        "Request Date/Time: " + submittedAt + "\n\n" +
+        "Reason for access, optional:\n" +
+        "[Please type reason here]\n\n" +
         "Thank you!"
       );
 
-      suppressUnsavedBeforeUnload = true;
       window.location.href = "mailto:" + contactEmail + "?subject=" + subject + "&body=" + body;
-
-      setTimeout(function() {
-        suppressUnsavedBeforeUnload = false;
-      }, 2000);
     }
 
     function updateConfiguredLink(linkElement, href, labelText) {
